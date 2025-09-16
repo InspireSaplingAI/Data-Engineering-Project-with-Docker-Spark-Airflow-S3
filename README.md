@@ -102,92 +102,44 @@ git clone <your-repo-url>
 cd Data-Engineering-Project-with-Docker-Spark-Airflow-S3
 ```
 
-#### 3 Configure Docker Compose
+#### 3 Finish eda/eda_without_spark.ipynb to explore data and generate result datset without using spark
 
-Create a `docker-compose.yml` file in your project root with the following content:
+#### 4 Finish src/generate_results_with_spark using spark
 
-```yaml
-version: '3.8'
+#### 5 Finish src/upload_to_s3.py and src/download_from_s3.py
 
-services:
-    spark-master:
-        image: bitnami/spark:latest
-        container_name: spark-master
-        environment:
-            - SPARK_MODE=master
-        ports:
-            - "7077:7077"
-            - "8080:8080"
+#### 6 Finish dags/data_engineering_dag.py
 
-    spark-worker:
-        image: bitnami/spark:latest
-        container_name: spark-worker
-        environment:
-            - SPARK_MODE=worker
-            - SPARK_MASTER_URL=spark://spark-master:7077
-        depends_on:
-            - spark-master
-        ports:
-            - "8081:8081"
+#### 7 Configure Docker Compose (docker compose create an docker images that can have multiple containers)
 
-    airflow-webserver:
-        image: apache/airflow:latest
-        container_name: airflow-webserver
-        environment:
-            - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-            - AIRFLOW__CORE__FERNET_KEY=your_fernet_key
-            - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
-            - AIRFLOW__CORE__LOAD_EXAMPLES=False
-        volumes:
-            - ./airflow/dags:/opt/airflow/dags
-            - ./airflow/logs:/opt/airflow/logs
-            - ./airflow/plugins:/opt/airflow/plugins
-        ports:
-            - "8082:8080"
-        command: webserver
-        depends_on:
-            - spark-master
-            - spark-worker
-```
+Modify the `docker-compose.yml` file in your project root so that: 
 
-#### 4 Initialize Airflow Directories
+It sets up a local data processing environment with:
 
-```bash
-mkdir -p airflow/dags airflow/logs airflow/plugins
-```
+ - Spark + Iceberg for processing large datasets
 
-#### 5 Start All Services
+ - MinIO as an S3-compatible object storage
+
+ - Airflow to orchestrate workflows
+
+ - Iceberg REST fixture for catalog access
+
+ - MinIO client (mc) for managing buckets
+
+All services are connected via a custom Docker network iceberg_net.
+
+
+#### 8 Start All Services
 
 ```bash
 docker-compose up -d
 ```
 
-#### 6 Initialize Airflow Database and Create Admin User
 
-```bash
-docker exec -it airflow-webserver airflow db init
-docker exec -it airflow-webserver airflow users create \
-    --username admin \
-    --firstname Admin \
-    --lastname User \
-    --role Admin \
-    --email admin@example.com \
-    --password admin
-```
-
-#### 7 Access UIs
+#### 9 Access UIs
 
 - **Spark UI:** [http://localhost:8080](http://localhost:8080)
 - **Airflow UI:** [http://localhost:8082](http://localhost:8082)
 
-#### 8 Running Spark Jobs
 
-Place your PySpark scripts in a shared directory or copy them into the master container. Submit jobs using:
-
-```bash
-docker exec -it spark-master spark-submit --master spark://spark-master:7077 /path/to/your_script.py
-```
-
-#### 9 Adding Airflow DAGs
-
-Add your DAG Python files to `airflow/dags/` to have them automatically detected by Airflow.
+#### 10 Update docker-compose.yaml to have the Dag running automatically when docker starts
